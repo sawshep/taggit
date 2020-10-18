@@ -1,11 +1,15 @@
+Something like this:
+
 struct Entry {
-    0xuint8: sum
-    String: name
-    String[]: tags
+    id: u32, // Or put these in a dictionary
+    hash: String,
+    name: String,
+    tags: String[],
 }
 
-Entry da39a3ee5e6b4b0d3255bfef95601890afd80709 = Entry (
-    sum: da39a3ee5e6b4b0d3255bfef95601890afd80709
-    name: boo.pdf
-    tags: ["horror", "scary"]
-)
+let 000004522 = Entry {
+    id: 4522, // Yeah, I'm going to use a dictionary.
+    hash: "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+    name: "boo.pdf",
+    tags: ["horror", "scary"],
+}
