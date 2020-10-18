@@ -1,0 +1,69 @@
+> ls -a
+README.md       book.pdf
+
+> taggit init
+> ls -a
+.taggit/        README.md       boo.pdf
+
+> taggit add boo.pdf -t scary horror
+> ls
+README.md       scary/          horror/
+
+> ls scary/ horror/
+scary:
+boo.pdf
+
+horror:
+boo.pdf
+
+> file scary/boo.pdf horror/boo.pdf
+scary/boo.pdf:  symbolic link to .taggit/files/boo.pdf
+horror/boo.pdf: symbolic link to .taggit/files/boo.pdf 
+
+# Change filename to checksum of file and add name field to struct?
+# or, make a new folder within files/ with the checksum as the name
+# and put the file into that.
+
+> touch jokes.pdf
+> mkdir funny
+> taggit add jokes.pdf --tags comedy funny
+Error: cannot create tag "funny"; directory already exists
+
+> ls
+README.md       scary/          horror/         funny/          jokes.pdf
+
+> taggit add jokes.pdf
+> ls
+README.md       scary/          horror/         untagged/       funny/
+
+> ls untagged
+jokes.pdf
+
+> taggit list --tags scary
+boo.pdf:
+    [horror], [scary]
+
+> taggit list
+boo.pdf:
+    [horror], [scary]
+jokes.pdf:
+
+> rmdir funny/
+> taggit tag untagged/jokes.pdf funny
+> ls
+README.md       scary/          horror/         funny/
+
+> ls funny/
+jokes.pdf
+
+> cp .taggit/files/boo.pdf ./boo2.pdf
+> taggit add boo2.pdf
+> taggit list --name boo*.pdf
+boo.pdf:
+    [horror], [scary]
+boo2.pdf:
+    [horror], [scary]
+
+# They have the same checksum!!!
+# tags are applied on a per checksum basis.
+

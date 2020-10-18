@@ -1,0 +1,61 @@
+name: taggit
+version: "0.1.0"
+about: File tagging system
+author: Saw. Shep. <60883209+sawshep@users.noreply.github.com>
+
+settings:
+    - ArgRequiredElseHelp
+
+subcommands:
+    - init:
+        about: Create a new Taggit archive or initialize an existing directory.
+        args:
+            - directory:
+                about: The directory to initialize.
+                takes_value: true
+                default_value: "."
+
+    - add:
+        about: Add a file to the Taggit archive.
+        args:
+            - files:
+                about: Add file to archive.
+                takes_value: true
+                required: true
+            - tags:
+                about: Tags to associate with the file's checksum.
+                short: t
+                long: tags
+                takes_value: true
+
+    - tag:
+        about: Manage tags associated with a checksum.
+        args:
+            - checksums:
+                about: Checksums to manage the tags of.
+                takes_value: true
+                required: true
+            - add:
+                about: New tags to associate with the checksum.
+                short: a
+                long: add
+                takes_value: true
+            - delete:
+                about: Tags to dissociate from a checksum.
+                short: d
+                long: delete
+                takes_value: true
+
+    - list:
+        about: Queries the archive.
+        args:
+            - name:
+                about: The filename to match in the query.
+                short: n
+                long: name
+                takes_value: true
+            - tags:
+                about: The tags to match in the query.
+                short: t
+                long: tags
+                takes_value: true

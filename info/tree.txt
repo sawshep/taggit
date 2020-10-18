@@ -1,0 +1,24 @@
+/
+|
++- scary/
+|  |
+|  +- boo.pdf            (symlink to 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7)
+|
++- horror/
+|  |
+|  +- boo.pdf            (symlink to 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7)
+|
++- nerd/
+|  |
+|  +- computer.pdf       (symlink to e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e)
+|
++- untracked.txt
+|
++- .taggit/
+   |
+   +- files/
+      |
+      +- 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7       (actual file)
+      |
+      +- e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e       (actual file)
+      

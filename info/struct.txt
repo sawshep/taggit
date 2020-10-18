@@ -1,0 +1,11 @@
+struct Entry {
+    0xuint8: sum
+    String: name
+    String[]: tags
+}
+
+Entry da39a3ee5e6b4b0d3255bfef95601890afd80709 = Entry (
+    sum: da39a3ee5e6b4b0d3255bfef95601890afd80709
+    name: boo.pdf
+    tags: ["horror", "scary"]
+)

@@ -1,0 +1,50 @@
+Option one: Works best for my book archive
+Tag dirs must be set to read only to prevent users from deleting them
+No manually updating of dir information required
+/
+    untracked.txt
+    untracked_dir/
+        also_untracked.md
+
+    tag_one/
+        [symlink to checksum one]
+    tag_two/
+        [symlink to checksum one]
+    tag_three/
+        [symlink to checksum two]
+    tag_four/
+        [symlink to checksum two]
+        [symlink to checksum one]
+
+    .taggit/
+        files/
+            [checksum one]
+            [checksum two]
+        structs [holds name, checksum, id, tags]
+        config
+
+
+Option two: Works best as a general purpose tagging system
+Tagged files can be moved around
+Allows for tagging files in subdirs
+The user must run an update command for Taggit to relocate the files
+requires a separate command to search for tags
+
+/
+    untracked.txt
+    random_dir/
+        [symlink to checksum one]
+        [symlink to checksun two]
+        another_dir/
+            [symlink to checksum three]
+
+        last_dir/
+            [symlink to checksum three]
+
+    .taggit/
+        files/
+            [checksum one]
+            [checksum two]
+            [checksum three]
+        structs
+        config
