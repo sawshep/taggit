@@ -18,6 +18,10 @@ subcommands:
     - add:
         about: Add a file to the Taggit archive.
         args:
+            - archive:
+                about: The archive to add files to.
+                takes_value: true
+                default_value: "."
             - files:
                 about: Add file to archive.
                 takes_value: true
@@ -31,6 +35,10 @@ subcommands:
     - tag:
         about: Manage tags associated with a checksum.
         args:
+            - archive:
+                about: The archive in which to manage checksum tags.
+                takes_value: true
+                default_value: "."
             - checksums:
                 about: Checksums to manage the tags of.
                 takes_value: true
@@ -49,6 +57,10 @@ subcommands:
     - list:
         about: Queries the archive.
         args:
+            - archive:
+                about: The archive to query.
+                takes_value: true
+                default_value: "."
             - name:
                 about: The filename to match in the query.
                 short: n

@@ -1,0 +1,137 @@
+GOAL:
+    The goal of this project is to create a command line file tagging system that integrates well with both Git and the basic *Nix tools.
+
+CONSTRAINT:
+    The only constraint for this project is time; I must finish by 10/27/2020.
+
+CRITERIA:
+    Some measureable criteria for this project include lines of code, maximum depth of indentation, and, execution time.
+
+ACCOMPLISH:
+    I have already completed a significant portion of my project, so I think that finishing it is reasonable.
+
+RESEARCH:
+    To make a program that integrates with Git, I had to understand how Git was built.
+    I briefly skimmed the paper Git From the Bottom Up. From what I took away, Git uses checksums of unique files to track changes. I realized I could use checksums to track the tags of files.
+    I familiarized myself with the sha1sum tool and Rust structures to get an idea of how I was going to create my program, and wrote some demos of how it would function, included below.
+
+Below is a demo of the utility:
+# List files (including hidden entries).
+> ls -a
+README.md       book.pdf
+
+# Notice the new hidden directory.
+> taggit init
+> ls -a
+.taggit/        README.md       boo.pdf
+
+# Add a file to the archive.
+> taggit add boo.pdf -t scary horror
+> ls
+README.md       scary/          horror/
+
+# The same file is in 2 folders.
+> ls scary/ horror/
+scary:
+boo.pdf
+
+horror:
+boo.pdf
+
+# The actual file is moved to a hidden directory.
+# Any reference to the file within the tag folders is a soft symbolic link.
+> file scary/boo.pdf horror/boo.pdf
+scary/boo.pdf:  symbolic link to .taggit/files/7015f4ec5c1ccdfcaec0ab226a8b63d739e23181
+horror/boo.pdf: symbolic link to .taggit/files/7015f4ec5c1ccdfcaec0ab226a8b63d739e23181
+
+# Make a file named jokes.pdf.
+> touch jokes.pdf
+
+# There cannot be a tag with the same name as an existing file.
+> mkdir funny
+> taggit add jokes.pdf --tags comedy funny
+Error: cannot create tag "funny"; directory already exists
+
+# The other valid tag folder is not made.
+> ls
+README.md       scary/          horror/         funny/          jokes.pdf
+
+# Now, add jokes.pdf with no tags.
+> taggit add jokes.pdf
+> ls
+README.md       scary/          horror/         untagged/       funny/
+
+# Entries without tags automatically get added to untagged/.
+> ls untagged
+jokes.pdf
+
+# Sorting all entries in the archive with the subcommand.
+> taggit list --tags scary
+boo.pdf:
+    [horror], [scary]
+
+# Calling list without any flags will list all the entries.
+> taggit list
+boo.pdf:
+    [horror], [scary]
+jokes.pdf:
+
+# Remove funny/
+> rmdir funny/
+
+# Now that funny does not exist, a tag folder can be made.
+> taggit tag untagged/jokes.pdf funny
+> ls
+README.md       scary/          horror/         funny/
+
+> ls funny/
+jokes.pdf
+
+# Copy the actual file data for boo.pdf to boo2.pdf.
+> cp .taggit/files/7015f4ec5c1ccdfcaec0ab226a8b63d739e23181 ./boo2.pdf
+
+# Add boo2.pdf to the archive
+# Keep in mind, boo2.pdf is identical to boo.pdf
+> taggit add boo2.pdf
+
+# boo2.pdf automatically has the same tags as boo.pdf!
+# This is because they have the same checksum.
+# Tags are applied on a per (SHA1) checksum basis.
+> taggit list --name boo*.pdf
+boo.pdf:
+    [horror], [scary]
+boo2.pdf:
+    [horror], [scary]
+
+
+Below is the directory structure of an example Taggit archive:
+/
+|
++- scary/
+|  |
+|  +- boo.pdf            (symlink to 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7)
+|
++- horror/
+|  |
+|  +- boo.pdf            (symlink to 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7)
+|
++- funny/
+|  |
+|  +- jokes.pdf          (symlink to e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e)
+|
++- untracked.txt
+|
++- .taggit/
+   |
+   +- structs
+   |
+   +- config
+   |
+   +- files/
+      |
+      +- 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7       (actual file)
+      |
+      +- e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e       (actual file)
+
+The structs file stores Rust structures serialzied in JSON format.
+The config file stores any user configuration settings I may add later.

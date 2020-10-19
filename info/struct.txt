@@ -1,15 +1,13 @@
 Something like this:
 
 struct Entry {
-    id: u32, // Or put these in a dictionary
     hash: String,
-    name: String,
+    names: String[], // Each checksum can go by multiple names
     tags: String[],
 }
 
-let 000004522 = Entry {
-    id: 4522, // Yeah, I'm going to use a dictionary.
+let entries[0] = Entry {
     hash: "da39a3ee5e6b4b0d3255bfef95601890afd80709",
-    name: "boo.pdf",
+    names: ["boo.pdf", "big-scares.pdf"],
     tags: ["horror", "scary"],
 }
