@@ -10,17 +10,16 @@ use clap::{load_yaml, App, ArgMatches};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sha1::Sha1;
-use std::ffi::OsStr;
 use std::fs;
-use std::io::{Error, Read};
+use std::io::{prelude::*, BufReader, Error, Read};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-//#[derive(Serialize, Deserialize, Debug)]
-struct Entry<'a> {
+#[derive(Serialize, Deserialize, Debug)]
+struct Entry {
     hash: String,
-    names: &'a Vec<&'a OsStr>,
-    tags: &'a Vec<&'a str>,
+    names: Vec<String>,
+    tags: Vec<String>,
 }
 
 const TAGGIT_FOLDER: &'static str = ".taggit";
@@ -61,6 +60,7 @@ fn taggit() -> i32 {
  * Initialize a new Taggit archive, either in an existing folder or a new one.
  */
 fn init(matches: &ArgMatches) -> i32 {
+    // Never panics
     let input_dir: &str = matches.value_of("directory").unwrap();
     let target_path = Path::new(&input_dir);
     let taggit_path: PathBuf = target_path.join(TAGGIT_FOLDER);
@@ -93,7 +93,7 @@ fn add(matches: &ArgMatches) -> i32 {
     }
     // Never panics
     let input_files: Vec<&str> = matches.values_of("files").unwrap().collect();
-    let structs_path = taggit_path.join("structs");
+    let structs_path = taggit_path.join("structs.json");
     let mut structs = match fs::OpenOptions::new()
         .read(true)
         .append(true)
@@ -115,6 +115,8 @@ fn add(matches: &ArgMatches) -> i32 {
             eprintln!("Cannot add {} to archive: is a directory", input_file);
             continue;
         }
+
+        // Calculate the SHA1 sum
         let hash = match checksum(&file_path) {
             Ok(h) => h,
             Err(_) => {
@@ -122,17 +124,45 @@ fn add(matches: &ArgMatches) -> i32 {
                 continue;
             }
         };
-        let name = &file_path.file_name().unwrap();
-        let mut entry = Entry {
-            hash: hash,
-            names: &vec![&name],
-            tags: &vec![],
-        };
+
+        // Find the name of the file.
+        // This included the extention.
+        // Convert it into a String so
+        // it looks pretty in JSON.
+        let name: String = file_path
+            .file_name()
+            // Should never panic, I'll
+            // have to double check this one.
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+
+        // Make the tag arguments into Strings
+        // so they look pretty in JSON.
+        let mut tags = vec![];
         if matches.is_present("tags") {
+            // Never panics
             let input_tags: Vec<&str> = matches.values_of("tags").unwrap().collect();
-            println!("{:?}", &input_tags);
-            entry.tags = &input_tags;
+            for tag in &input_tags {
+                tags.push(String::from(*tag));
+            }
         }
+
+        let reader = BufReader::new(&structs);
+        for line in reader.lines() {
+            // Handle this panic
+            let entry: Entry = serde_json::from_str(line.unwrap().as_str()).unwrap();
+            if hash == entry.hash {}
+        }
+        let entry = Entry {
+            hash: hash,
+            names: vec![name],
+            tags: tags,
+        };
+        let json = serde_json::to_string(&entry).unwrap();
+        structs
+            .write_all((json + "\n").as_bytes())
+            .expect("Failed to write to structs file.");
     }
     0
 }
@@ -161,20 +191,24 @@ fn checksum(path: &Path) -> Result<String, Error> {
  * Manage tags associated with checksums.
  */
 fn tag(matches: &ArgMatches) -> i32 {
+    // Never panics
     let input_dir: &str = matches.value_of("archive").unwrap();
     let taggit_path = Path::new(input_dir).join(TAGGIT_FOLDER);
     if !taggit_path.is_dir() {
         eprintln!("Taggit archive does not exist in {}", input_dir);
         return 1;
     }
+    // Never panics
     let checksums: Vec<&str> = matches.values_of("checksums").unwrap().collect();
     // ^ TODO: Make user interface with tag work based on file IDs, not checksums.
     // (Still make tags associate with checksums, though)
     if matches.is_present("add") {
+        // Never panics
         let tags: Vec<&str> = matches.values_of("add").unwrap().collect();
         println!("Associated {:?} with {:?}", tags, checksums);
     }
     if matches.is_present("delete") {
+        // Never panics
         let tags: Vec<&str> = matches.values_of("delete").unwrap().collect();
         println!("Dissociated {:?} with {:?}", tags, checksums);
     }
@@ -185,6 +219,7 @@ fn tag(matches: &ArgMatches) -> i32 {
  * Query the list of checksums tracked by Taggit, optionally filtering by name and tags.
  */
 fn list(matches: &ArgMatches) -> i32 {
+    // Never panics
     let input_dir: &str = matches.value_of("archive").unwrap();
     let taggit_path = Path::new(input_dir).join(TAGGIT_FOLDER);
     if !taggit_path.is_dir() {
@@ -192,10 +227,12 @@ fn list(matches: &ArgMatches) -> i32 {
         return 1;
     }
     if matches.is_present("name") {
+        // Never panics
         let name: &str = matches.value_of("name").unwrap();
         println!("Sorting by {}", name);
     }
     if matches.is_present("tags") {
+        // never panics
         let tags: Vec<&str> = matches.values_of("tags").unwrap().collect();
         println!("Sorting by {:?}", tags);
     }

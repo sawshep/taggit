@@ -18,14 +18,16 @@ subcommands:
     - add:
         about: Add a file to the Taggit archive.
         args:
-            - archive:
-                about: The archive to add files to.
-                takes_value: true
-                default_value: "."
             - files:
                 about: Add file to archive.
                 takes_value: true
                 required: true
+            - archive:
+                about: The archive to add files to.
+                short: a
+                long: archive
+                takes_value: true
+                default_value: "."
             - tags:
                 about: Tags to associate with the file's checksum.
                 short: t
