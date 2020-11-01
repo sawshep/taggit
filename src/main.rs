@@ -15,12 +15,64 @@ use std::io::{prelude::*, BufReader, Error, Read};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct Entry {
     hash: String,
     names: Vec<String>,
     tags: Vec<String>,
 }
+
+impl Entry {
+    /**
+     * Moves the attributes of the provided
+     * entry, excluding the SHA1 hash, into
+     * the vectors of `self`. Also deletes
+     * duplicates.
+     */
+    fn combine(&mut self, entry: &mut Entry) {
+        self.names.append(&mut entry.names);
+        self.names.sort();
+        self.names.dedup();
+
+        self.tags.append(&mut entry.tags);
+        self.tags.sort();
+        self.tags.dedup();
+    }
+}
+
+/**
+ * A bit of a wrapper class to
+ * make the code below more linear
+ */
+#[derive(Serialize, Deserialize)]
+struct Entries {
+    entries: Vec<Entry>,
+}
+
+impl Entries {
+    /**
+     * If there is a matching entry in the Entries,
+     * returns its index and a reference to the entry.
+     */
+    fn get_match(&mut self, compare: &Entry) -> Option<&mut Entry> {
+        for entry in self.entries.iter_mut() {
+            if entry.hash == compare.hash {
+                return Some(entry);
+            }
+        }
+        None
+    }
+
+    fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    fn push(&mut self, value: Entry) {
+        self.entries.push(value);
+    }
+}
+
+// TODO: impl Iterator for Entries
 
 const TAGGIT_FOLDER: &'static str = ".taggit";
 
@@ -49,7 +101,7 @@ fn taggit() -> i32 {
         exit_code = list(matches);
     } else {
         exit_code = 1;
-        eprintln!("Error: an unknown error occured");
+        eprintln!("Error: an unknown error occurred");
     }
     /* --------------------------------- */
 
@@ -86,17 +138,23 @@ fn init(matches: &ArgMatches) -> i32 {
 fn add(matches: &ArgMatches) -> i32 {
     // Never panics
     let input_dir: &str = matches.value_of("archive").unwrap();
+    // Checks if the archive exists
     let taggit_path = Path::new(input_dir).join(TAGGIT_FOLDER);
     if !taggit_path.is_dir() {
         eprintln!("Taggit archive does not exist in {}", input_dir);
         return 1;
     }
-    // Never panics
-    let input_files: Vec<&str> = matches.values_of("files").unwrap().collect();
+
+    let input_files: Vec<&str> = matches
+        .values_of("files")
+        .unwrap() // Never panics
+        .collect();
+
     let structs_path = taggit_path.join("structs.json");
-    let mut structs = match fs::OpenOptions::new()
+    let mut structs_file = match fs::OpenOptions::new()
         .read(true)
-        .append(true)
+        .write(true)
+        .truncate(true)
         .create(true)
         .open(&structs_path)
     {
@@ -109,6 +167,25 @@ fn add(matches: &ArgMatches) -> i32 {
             return 1;
         }
     };
+
+    /* I've chosen to attempt to load
+     * the file into memory as late as
+     * possible. In theory, this should
+     * make the program run and terminate
+     * faster if the user makes an error
+     * before this point. I'll have to
+     * check this logic, though.
+     */
+    let mut entries = Entries {
+        entries: Vec::new(),
+    };
+    let reader = BufReader::new(&structs_file);
+    for line in reader.lines() {
+        // Handle this panic
+        let entry: Entry = serde_json::from_str(line.unwrap().as_str()).unwrap();
+        entries.push(entry);
+    }
+
     for input_file in input_files {
         let file_path = Path::new(input_file);
         if !file_path.is_file() {
@@ -117,7 +194,7 @@ fn add(matches: &ArgMatches) -> i32 {
         }
 
         // Calculate the SHA1 sum
-        let hash = match checksum(&file_path) {
+        let hash = match sha1sum(&file_path) {
             Ok(h) => h,
             Err(_) => {
                 eprintln!("Cannot open {}, skipping", input_file);
@@ -126,13 +203,11 @@ fn add(matches: &ArgMatches) -> i32 {
         };
 
         // Find the name of the file.
-        // This included the extention.
+        // This included the extension.
         // Convert it into a String so
         // it looks pretty in JSON.
         let name: String = file_path
             .file_name()
-            // Should never panic, I'll
-            // have to double check this one.
             .unwrap()
             .to_string_lossy()
             .into_owned();
@@ -148,29 +223,39 @@ fn add(matches: &ArgMatches) -> i32 {
             }
         }
 
-        let reader = BufReader::new(&structs);
-        for line in reader.lines() {
-            // Handle this panic
-            let entry: Entry = serde_json::from_str(line.unwrap().as_str()).unwrap();
-            if hash == entry.hash {}
-        }
-        let entry = Entry {
+        let mut new = Entry {
             hash: hash,
             names: vec![name],
             tags: tags,
         };
-        let json = serde_json::to_string(&entry).unwrap();
-        structs
-            .write_all((json + "\n").as_bytes())
-            .expect("Failed to write to structs file.");
+
+        match entries.get_match(&new) {
+            Some(old) => {
+                old.combine(&mut new);
+            }
+            None => {
+                entries.push(new);
+            }
+        }
+        for entry in &entries.entries {
+            // Handle this panic
+            let json = serde_json::to_string(&entry).unwrap() + "\n";
+            match structs_file.write_all(json.as_bytes()) {
+                Ok(r) => r,
+                Err(_) => {
+                    eprintln!("Failed to write to structs file");
+                    return 1;
+                }
+            }
+        }
     }
     0
 }
 
 /**
- * Find the checksum of a file.
+ * Find the sha1 checksum of a file.
  */
-fn checksum(path: &Path) -> Result<String, Error> {
+fn sha1sum(path: &Path) -> Result<String, Error> {
     let mut file = match fs::File::open(path) {
         Ok(f) => f,
         Err(e) => return Err(e),
