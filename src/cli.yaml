@@ -21,6 +21,7 @@ subcommands:
             - files:
                 about: Add file to archive.
                 takes_value: true
+                multiple: true
                 required: true
             - archive:
                 about: The archive to add files to.
@@ -33,6 +34,7 @@ subcommands:
                 short: t
                 long: tags
                 takes_value: true
+                multiple: true
 
     - tag:
         about: Manage tags associated with a checksum.

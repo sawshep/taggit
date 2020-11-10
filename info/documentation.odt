@@ -1,0 +1,160 @@
+﻿Software Engineering Project Documentation
+Sawyer Shepherd
+Foundations of Engineering
+Novemer 2, 2020
+
+Goal:
+	The goal of this project was to create a simple file tagging system. I wanted to not use metadata stored in the actual files, and make the files searchable with the core command line utilities. I also wanted text-based configuration for advanced users.
+
+Research and Imagining:
+	The seed of my idea came from the version-control system called Git. Git is very complicated and does many things, but the basic idea is to track what files changed and which ones. I was only interesed in how it determined if a file changed.
+	Git uses the Secure Hashing Algorithm 1 to calculate a 20 digit hexidecimal number that is unique to the data inputted (Technically, there can be collisions, but those are a non-issue for this project).
+	My basic design idea was to associate file tags with the checksums of a file. This means that if a user added a file to the archive with the tag "horror", and then later added an identical file with the tag "scary", the tags would both be associated with the same checksum. I then would need to store this data in a file for when the program was run the next time.
+	I would have four basic commands: init, add, list, and manage. Below is a description of the function of each command.
+init: 
+Initializes the directory provided in the argument (or the current one, if none is provided) as a Taggit archive. Creates the hidden ".taggit" directory, which contains both a JSON file holding the metadata about each hash, and a folder in which the actual file data is moved to later by the add command.
+add:
+This is the most complicated command. Adds a file to the taggit archive. Calculates the checksum of the files passed as arguments, and sees if any are identical to other entries in the archive. If they are, add the tags and filenames passed as flag arguments to the entry. If they are not, create new entries in the archive with this data, and move the actual file data to a hidden directory, named as the file's checksum. A directory is created for every tag that exists, with a symlink inside that links to the file within the hidden directory, if it has that tag.
+list: Lists the entries in an archive. Also filters based on tag and name flags. Reads the file where the entries are stored, and prints the information of any entries that fit the user’s artguments.
+	manage:
+
+
+Plan:
+Below is a copy of my design proposal.
+
+Goal: The goal of this project is to create a command line file tagging system that integrates well with both Git and the basic *Nix tools.
+
+Constraint: The only constraint for this project is time; I must finish by 10/27/2020.
+
+Criteria: Some measureable criteria for this project include lines of code, maximum depth of indentation, and, execution time.
+
+Accomplishment: I have already completed a significant portion of my project, so I think that finishing it is reasonable.
+
+Research:
+    To make a program that integrates with Git, I had to understand how Git was built.
+    I briefly skimmed the paper Git From the Bottom Up. From what I took away, Git uses checksums of unique files to track changes. I realized I could use checksums to track the tags of files.
+    I familiarized myself with the sha1sum tool and Rust structures to get an idea of how I was going to create my program, and wrote some demos of how it would function, included below.
+
+Demo:
+# List files (including hidden entries).
+> ls -a
+README.md       book.pdf
+
+# Notice the new hidden directory.
+> taggit init
+> ls -a
+.taggit/        README.md       boo.pdf
+
+# Add a file to the archive.
+> taggit add boo.pdf -t scary horror
+> ls
+README.md       scary/          horror/
+
+# The same file is in 2 folders.
+> ls scary/ horror/
+scary:
+boo.pdf
+
+horror:
+boo.pdf
+
+# The actual file is moved to a hidden directory.
+# Any reference to the file within the tag folders is a soft symbolic link.
+> file scary/boo.pdf horror/boo.pdf
+scary/boo.pdf:  symbolic link to .taggit/files/7015f4ec5c1ccdfcaec0ab226a8b63d739e23181
+horror/boo.pdf: symbolic link to .taggit/files/7015f4ec5c1ccdfcaec0ab226a8b63d739e23181
+
+# Make a file named jokes.pdf.
+> touch jokes.pdf
+
+# There cannot be a tag with the same name as an existing file.
+> mkdir funny
+> taggit add jokes.pdf --tags comedy funny
+Error: cannot create tag "funny"; directory already exists
+
+# The other valid tag folder is not made.
+> ls
+README.md       scary/          horror/         funny/          jokes.pdf
+
+# Now, add jokes.pdf with no tags.
+> taggit add jokes.pdf
+> ls
+README.md       scary/          horror/         untagged/       funny/
+
+# Entries without tags automatically get added to untagged/.
+> ls untagged
+jokes.pdf
+
+# Sorting all entries in the archive with the subcommand.
+> taggit list --tags scary
+boo.pdf:
+    [horror], [scary]
+
+# Calling list without any flags will list all the entries.
+> taggit list
+boo.pdf:
+    [horror], [scary]
+jokes.pdf:
+
+# Remove funny/
+> rmdir funny/
+
+# Now that funny does not exist, a tag folder can be made.
+> taggit tag untagged/jokes.pdf funny
+> ls
+README.md       scary/          horror/         funny/
+
+> ls funny/
+jokes.pdf
+
+# Copy the actual file data for boo.pdf to boo2.pdf.
+> cp .taggit/files/7015f4ec5c1ccdfcaec0ab226a8b63d739e23181 ./boo2.pdf
+
+# Add boo2.pdf to the archive
+# Keep in mind, boo2.pdf is identical to boo.pdf
+> taggit add boo2.pdf
+
+# boo2.pdf automatically has the same tags as boo.pdf!
+# This is because they have the same checksum.
+# Tags are applied on a per (SHA1) checksum basis.
+> taggit list --name boo*.pdf
+boo.pdf:
+    [horror], [scary]
+boo2.pdf:
+    [horror], [scary]
+
+Files:
+/
+|
++- scary/
+|  |
+|  +- boo.pdf            (symlink to 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7)
+|
++- horror/
+|  |
+|  +- boo.pdf            (symlink to 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7)
+|
++- funny/
+|  |
+|  +- jokes.pdf          (symlink to e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e)
+|
++- untracked.txt
+|
++- .taggit/
+   |
+   +- structs
+   |
+   +- config
+   |
+   +- files/
+      |
+      +- 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7       (actual file)
+      |
+      +- e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e       (actual file)
+
+The structs file stores Rust structures serialzied in JSON format.
+The config file stores any user configuration settings I may add later.
+
+Create:
+
+Evalutaion and Redesign:
