@@ -16,9 +16,9 @@ mod common;
 mod taggit;
 
 fn main() -> Result<(), Error> {
+    // Loads the clap configuration
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from(yaml).get_matches();
-    let exit_code: i32;
 
     if let Some(ref matches) = matches.subcommand_matches("init") {
         init(matches)?;
@@ -38,15 +38,16 @@ fn main() -> Result<(), Error> {
  */
 fn init(matches: &ArgMatches) -> Result<(), Error> {
     // Never panics
-    let input_dir: &str = matches.value_of("directory").unwrap();
-    let target_path = Path::new(&input_dir);
-    let taggit_path: PathBuf = target_path.join(taggit::TAGGIT_FOLDER);
-    let msg = format!("Archive already exists in {}", input_dir);
-    if taggit_path.exists() {
+    let input: &str = matches.value_of("directory").unwrap();
+    let path = Path::new(&input);
+    let taggit: PathBuf = path.join(".taggit");
+
+    let msg = format!("Archive already exists in {}", input);
+    if taggit.exists() {
         return Err(Error::new(ErrorKind::AlreadyExists, msg));
     }
-    fs::create_dir_all(taggit_path.join("files"))?;
-    println!("Initialized Taggit archive in {}", input_dir);
+    fs::create_dir_all(path.join(taggit::FILES_FOLDER))?;
+    println!("Initialized Taggit archive in {}", input);
     Ok(())
 }
 
@@ -57,7 +58,7 @@ fn add(matches: &ArgMatches) -> Result<(), Error> {
     // Never panics
     let input_dir: &str = matches.value_of("archive").unwrap();
 
-    let archive = taggit::Archive::from_path(Path::new(input_dir))?;
+    let mut archive = taggit::Archive::from_path(Path::new(input_dir))?;
 
     let input_files: Vec<&str> = matches
         .values_of("files")
@@ -107,7 +108,7 @@ fn add(matches: &ArgMatches) -> Result<(), Error> {
             tags: tags,
         };
 
-        match archive.entries.get_match_mut(&new) {
+        match archive.get_match_mut(&new) {
             Some(old) => {
                 old.combine(&mut new);
             }
@@ -135,9 +136,9 @@ fn tag(matches: &ArgMatches) -> Result<(), Error> {
     // ^ TODO: Make user interface with tag work based on file IDs, not checksums.
     // (Still make tags associate with checksums, though)
 
-    for entry in archive.entries.entries {
-        for hash in checksums {
-            if hash == entry.hash {}
+    for entry in archive.entries {
+        for hash in &checksums {
+            if *hash == entry.hash {}
         }
     }
     if matches.is_present("add") {
@@ -158,11 +159,14 @@ fn tag(matches: &ArgMatches) -> Result<(), Error> {
  */
 fn list(matches: &ArgMatches) -> Result<(), Error> {
     // Never panics
-    let input_dir: &str = matches.value_of("archive").unwrap();
+    /*
+     * These are just commented out right now so I don't get the
+     * annoying warnings when building.
+     */
+    //let input_dir: &str = matches.value_of("archive").unwrap();
 
-    let archive = taggit::Archive::from_path(Path::new(input_dir))?;
-
-    for entry in archive.entries.entries {}
+    //let archive = taggit::Archive::from_path(Path::new(input_dir))?;
+    //for entry in archive.entries.entries {}
 
     if matches.is_present("name") {
         // Never panics
